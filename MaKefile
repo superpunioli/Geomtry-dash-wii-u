@@ -1,0 +1,2 @@
+all:
+powerpc-eabi-g++ -c gd.cxx -o gd.o
