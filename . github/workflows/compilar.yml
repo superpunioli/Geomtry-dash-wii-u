@@ -1,0 +1,13 @@
+name: WiiU
+on: [push]
+jobs:
+ build:
+  runs-on: ubuntu-latest
+  container: devkitpro/devkitpccafe: latest 
+ steps:
+  -uses: actions/checkout@v4
+  -name: install SDL2
+  run: |
+  dkp-pacman -Syu --noconfirm
+  dkp-pacman -S wiiu-sdl2 wiiu-sdl2_mixer wiiu-sdl2_imagen --noconfirm
+  - run: make
