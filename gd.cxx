@@ -11,28 +11,64 @@
 #include <unistd.h>
 
 //#include "main.h"
-#include "menu.h"
-#include "level_loading.h"
+//#include "menu.h"
+//#include "level_loading.h"
 
 
-#include "objects.h"
+//#include "objects.h"
 
 //#include "cursor_png.h"
 
 //#include "player.h"
-#include "math.h"
 
-#include "game.h"
-
-
-
-
-
-
-
-
-
-
+//#include "game.h"
+SDL_Window* window = NULL;
+SDL_Renderer* renderer = NULL;
+float playerY =360.0f;
+float playerVelocityY =0.0f;
+float gravity = 0.5f;
+float jumpForce = -9.0f;
+bool isGrounded = true;
+void update_player_physics() {
+if (!isGrounded) {
+  playerVelocityY += gravity;
+}
+playerY += playerVelocityY;
+  // Limite del suelo (por ahora provisional a 500 píxeles de altura)
+  if (playerY >=500.0f) {
+    playerY = 500.0f;
+    playerVelocityY = 0.0f;
+    isGrounded = true;
+     }
+}
+void player_jump() {
+  if (isGrounded) {
+    playerVelocityY = jumpForce;
+    isGrounded =false;
+     }
+}
+bool menu_loop() { return false; }
+bool game_loop() {
+  SDL_Event event;
+  while (SDL_PollEvent(&event)) {
+    if (event.type == SDL_QUIT) 
+return true; // sale del juego
+   }
+  // 1. Pintar el fondo de azul de Geometry Dash
+  tRenderDrawColor(renderer, 0, 120, 255, 255);
+  r(renderer);
+  // 2. Dibuja el suelo verde
+  SDL_Rect floor = {0, 550, 1280, 170};
+  SDL_SetRenderDrawColor(renderer, 0, 200, 80, 255);
+  // Detecta botones del mando (GamePad/Pro Controller) o trclas
+  if (event.type == SDL_CONTROLLERBUTTONDOWN || event.type == SDL_KEYDOWN) {
+    player_jump(); //¡Hace saltar el cubo
+    }
+}
+// Actualuza la gravedad y el movimiento del cubo
+update_player_physics();
+return false; // Sigue jugando sin salir
+}
 // Declare Static Functions
 static void ExitGame(void);
 #define ROUTINE_MENU 0
@@ -42,14 +78,14 @@ static void ExitGame(void);
 typedef unsigned long long u64;
 struct GameState {};
 struct AnimationLibrary  {};
-u64 gettime( ) { return 0; }
+u64 gettime( ) { return SDL_GetTicks(); }
 int screenWidth = 0; 
 int screenHeight = 0;
 float screen_factor_x = 0;
 float screen_factor_y = 0;
 int widthAdjust = 0;
 
-int gameRoutine = ROUTINE_MENU;
+int gameRoutine = ROUTINE_GAME;
 
 u64 startTime;
 int frameCount = 0;
@@ -344,53 +380,56 @@ void SYS_STDIO_Report(bool use_stdout)
 }
 
 int main(int argc, char **argv) {
+  WHBProcInit();
+  SDL_Init(SDL_INIT_VIDEO | SDL_INIT_GAMECONTROLLER | SDL_INIT_AUDIO);
+  window = SDL_CreateWindow( "GD Wii U", 0,0, 1280, 720, 0);
+  renderer = SDL_CreateRenderer(window, -1, SDL_RENDERER_ACCELERATED);
     if (argc > 0) {
         set_launch_dir(argv[0]);
     }
 
-    if (!fatInitDefault()) {
-		output_log("fatInitDefault failure\n");
-	}
-
-    SYS_STDIO_Report(true);
-    // Init GRRLIB & WiiUse
-    output_log("grrlib status %d, is dolphin %d\n", GRRLIB_Init(), is_dolphin());
     
-    WPAD_Init();
-    PAD_Init();
-    WPAD_SetIdleTimeout( 60 * 10 );
-    WPAD_SetDataFormat( WPAD_CHAN_0, WPAD_FMT_BTNS_ACC_IR );
+	
+	
+
+    
+    // Init GRRLIB & WiiUse
+ //
+    
+ SDL_GameControllerOpen(0); 
+    
+    
+    
 
     srand(time(NULL));
 
     // Initialise the audio subsystem
-	ASND_Init();
-    MP3Player_Init();
-    
-    SetVolumeOgg(255);
-    load_spritesheet();
+	
+    Mix_OpenAudio(44100, MIX_DEFAULT_FORMAT, 2 2028); SDL_GameControllerOpen(0);
+  
 
     // Set resolution based on mode
-    screenWidth  = GRRLIB_Settings.width;   // Framebuffer width (typically 640)
-    screenHeight = GRRLIB_Settings.height; // EFB height (usually 480 or 576)
+    screenWidth  = 1280;  // Framebuffer width (typically 640)
+    screenHeight = 720;
+    // EFB height (usually 480 or 576)
 
     widthAdjust = (screenWidth - 640) / 2.f;
 
     screen_factor_x = (float) screenWidth / 640;
     screen_factor_y = (float) screenHeight / 480;
 
-    output_log("xfb[0]=%p xfb[1]=%p\n", xfb[0], xfb[1]);
+    //output_log("xfb[0]=%p xfb[1]=%p\n", xfb[0], xfb[1]);
 
-    output_log("%d, %d mode %d\n", screenWidth, screenHeight, rmode->viTVMode);
+  //
 
-    startTime = gettime();    
+    startTime = SDL_GetTicks();  
 
-    cursor = GRRLIB_LoadTexturePNG(cursor_png);
-    GRRLIB_SetHandle(cursor, 14, 22);
-    big_font_text = GRRLIB_LoadTexturePNG(bigFont_png);
+    //cursor = GRRLIB_LoadTexturePNG(cursor_png);
+    //GRRLIB_SetHandle(cursor, 14, 22);
+    //big_font_text = GRRLIB_LoadTexturePNG(bigFont_png);
 
     // hopefully this fixes the ir position
-    WPAD_SetVRes(WPAD_CHAN_0,screenWidth,screenHeight);
+    //WPAD_SetVRes(WPAD_CHAN_0,screenWidth,screenHeight);
     
     char robot_plist_path[278];
     
@@ -403,10 +442,10 @@ int main(int argc, char **argv) {
                robot_animations.animations[i].name,
                robot_animations.animations[i].frameCount);
     }
-    WPAD_SetDataFormat(WPAD_CHAN_ALL, WPAD_FMT_BTNS_ACC_IR);
+  //
 
     full_init_variables();
-    while(1) {
+    while(WHBProcIsRunning()) {
         switch (gameRoutine) {
             case ROUTINE_MENU:
                 if (menu_loop()) goto Exit;
@@ -417,8 +456,9 @@ int main(int argc, char **argv) {
         }
     }
 Exit:
-	MP3Player_Stop();
+Mix_CloseAudio();
     ExitGame();
+  WHBProcShutdown();
     return 0;
 }
 
@@ -428,7 +468,7 @@ static void ensure_log_file(void) {
     if (log_file) return;  // already open
 
     // Initialize SD/USB filesystem
-    if (!fatInitDefault()) return;
+   // if (!fatInitDefault()) return;
 
     char log_filename[278];
     snprintf(log_filename, sizeof(log_filename), "%s/%s", launch_dir, "output.txt");
